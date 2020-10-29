@@ -1089,6 +1089,8 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
                         name: UIMenuController.didHideMenuNotification,
                         object: nil)
         
+        NotificationCenter.default.addObserver(self,selector: #selector(keyboardDidHide),name: UIResponder.keyboardDidHideNotification, object: nil)
+        
         // listen for videos playing in fullscreen
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(onEnterFullscreen(_:)),
@@ -3177,6 +3179,10 @@ if(window.\(JAVASCRIPT_BRIDGE_NAME)[\(_callHandlerID)] != null) {
         removeFlutterMaskView()
     }
     
+    @objc func keyboardDidHide() {
+        removeFlutterMaskView()
+    }
+    
     func removeFlutterMaskView() {
         /// For some flutter widget update reason, remove the `FlutterClippingMaskView` in this method is more safely.
 
@@ -3192,6 +3198,7 @@ if(window.\(JAVASCRIPT_BRIDGE_NAME)[\(_callHandlerID)] != null) {
         }
     }
     
+
 //    var accessoryView: UIView?
 //
 //    // https://stackoverflow.com/a/58001395/4637638
