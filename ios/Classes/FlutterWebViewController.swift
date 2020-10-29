@@ -214,6 +214,7 @@ public class FlutterWebViewController: FlutterMethodCallDelegate, FlutterPlatfor
                 break
             case "evaluateJavascript":
                 if webView != nil {
+                    removeFlutterMaskView()
                     let source = (arguments!["source"] as? String)!
                     webView!.evaluateJavascript(source: source, result: result)
                 }
@@ -517,5 +518,23 @@ public class FlutterWebViewController: FlutterMethodCallDelegate, FlutterPlatfor
                 result(FlutterMethodNotImplemented)
                 break
         }
+    }
+    
+    func removeFlutterMaskView() {
+        /// For some flutter widget update reason, remove the `FlutterClippingMaskView` in this method is more safely.
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.45) {
+            guard let flutterClippingMaskView = self.myView?.superview?.superview?.subviews.last else {
+                return
+            }
+
+            /// Remove the `FlutterClippingMaskView`,
+            /// https://github.com/flutter/engine/pull/21286/files,
+            /// https://github.com/flutter/flutter/issues/66044
+            
+            if ((NSStringFromClass(flutterClippingMaskView.classForCoder) == "FlutterClippingMaskView")) {
+                flutterClippingMaskView.removeFromSuperview()
+            }
+        }
+       
     }
 }
