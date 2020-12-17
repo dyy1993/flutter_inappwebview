@@ -1089,6 +1089,8 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
                         name: UIMenuController.didHideMenuNotification,
                         object: nil)
         
+        NotificationCenter.default.addObserver(self,selector: #selector(keyboardDidHide),name: UIResponder.keyboardDidHideNotification, object: nil)
+        
         // listen for videos playing in fullscreen
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(onEnterFullscreen(_:)),
@@ -1127,8 +1129,8 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
                 scrollView.contentInsetAdjustmentBehavior =
                     UIScrollView.ContentInsetAdjustmentBehavior.init(rawValue: options.contentInsetAdjustmentBehavior)!
             }
-            
-            allowsBackForwardNavigationGestures = options.allowsBackForwardNavigationGestures
+            /// Disable back forward navigavigation guestures, as the `FlutterClippingMaskView`was removed, otherwise it will cause the app crash.
+            allowsBackForwardNavigationGestures = false
             if #available(iOS 9.0, *) {
                 allowsLinkPreview = options.allowsLinkPreview
                 if !options.userAgent.isEmpty {
@@ -1646,9 +1648,9 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
         if newOptionsMap["suppressesIncrementalRendering"] != nil && options?.suppressesIncrementalRendering != newOptions.suppressesIncrementalRendering {
             configuration.suppressesIncrementalRendering = newOptions.suppressesIncrementalRendering
         }
-        
+        /// Disable back forward navigavigation guestures, as the `FlutterClippingMaskView`was removed, otherwise it will cause the app crash.
         if newOptionsMap["allowsBackForwardNavigationGestures"] != nil && options?.allowsBackForwardNavigationGestures != newOptions.allowsBackForwardNavigationGestures {
-            allowsBackForwardNavigationGestures = newOptions.allowsBackForwardNavigationGestures
+            allowsBackForwardNavigationGestures = false
         }
         
         if newOptionsMap["javaScriptCanOpenWindowsAutomatically"] != nil && options?.javaScriptCanOpenWindowsAutomatically != newOptions.javaScriptCanOpenWindowsAutomatically {
@@ -1991,6 +1993,8 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
             IABController!.forwardButton.isEnabled = canGoForward
             IABController!.spinner.stopAnimating()
         }
+        
+        removeFlutterMaskView()
     }
     
     public func webView(_ view: WKWebView,
@@ -2013,6 +2017,8 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
         }
         
         onLoadError(url: urlError, error: error)
+        
+        removeFlutterMaskView()
         
         if IABController != nil {
             IABController!.backButton.isEnabled = canGoBack
@@ -2734,7 +2740,7 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
                 message = "Indicates a failure other than that of trust evaluation."
                 break
             case .recoverableTrustFailure:
-                message = "Indicates a trust policy failure which can be overridden by the user."
+                message = "Indicates a trust plicy failure which can be overridden by the user."
                 break
             case .unspecified:
                 message = "Indicates the evaluation succeeded and the certificate is implicitly trusted, but user intent was not explicitly specified."
@@ -3169,6 +3175,30 @@ if(window.\(JAVASCRIPT_BRIDGE_NAME)[\(_callHandlerID)] != null) {
         print("InAppWebView - dealloc")
     }
     
+    public override func draw(_ rect: CGRect) {
+        removeFlutterMaskView()
+    }
+    
+    @objc func keyboardDidHide() {
+        removeFlutterMaskView()
+    }
+    
+    func removeFlutterMaskView() {
+        /// For some flutter widget update reason, remove the `FlutterClippingMaskView` in this method is more safely.
+
+        guard let flutterClippingMaskView = self.superview?.superview?.superview?.subviews.last else {
+            return
+        }
+        /// Remove the `FlutterClippingMaskView`,
+        /// https://github.com/flutter/engine/pull/21286/files,
+        /// https://github.com/flutter/flutter/issues/66044
+        
+        if ((NSStringFromClass(flutterClippingMaskView.classForCoder) == "FlutterClippingMaskView")) {
+            flutterClippingMaskView.removeFromSuperview()
+        }
+    }
+    
+
 //    var accessoryView: UIView?
 //
 //    // https://stackoverflow.com/a/58001395/4637638
